@@ -21,6 +21,8 @@ cd Uninstall-aliyun-service
 
 clear
 
+yum install redhat-lsb -y
+
 wget http://update.aegis.aliyun.com/download/uninstall.sh
 chmod +x uninstall.sh
 ./uninstall.sh
