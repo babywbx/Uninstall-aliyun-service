@@ -32,7 +32,7 @@ clear
 # Check if user is root
 [ $(id -u) != "0" ] && { echo "${CFAILURE}Error: You must be root to run this script${CEND}"; exit 1; }
 
-mkdir -p Uninstall-aliyun-service
+mkdir Uninstall-aliyun-service
 chmod 777 Uninstall-aliyun-service
 cd Uninstall-aliyun-service
 
