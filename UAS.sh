@@ -23,6 +23,7 @@ printf "
 #######################################################################
 "
 
+echo ""
 echo "Press any key to continue!"
 char=`get_char`
 
