@@ -4,6 +4,17 @@
 
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+get_char()
+{
+SAVEDSTTY=`stty -g`
+stty -echo
+stty cbreak
+dd if=/dev/tty bs=1 count=1 2> /dev/null
+stty -raw
+stty echo
+stty $SAVEDSTTY
+}
+
 clear
 printf "
 #######################################################################
@@ -11,6 +22,11 @@ printf "
 #       For more information please visit https://wbx123.com          #
 #######################################################################
 "
+
+echo "Press any key to continue!"
+char=`get_char`
+
+clear
 
 # Check if user is root
 [ $(id -u) != "0" ] && { echo "${CFAILURE}Error: You must be root to run this script${CEND}"; exit 1; }
