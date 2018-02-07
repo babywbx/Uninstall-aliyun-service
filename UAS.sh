@@ -62,7 +62,8 @@ iptables -I INPUT -s 140.205.225.206/32 -j DROP
 iptables -I INPUT -s 140.205.225.205/32 -j DROP
 iptables -I INPUT -s 140.205.225.195/32 -j DROP
 iptables -I INPUT -s 140.205.225.204/32 -j DROP
-rm -rf ${dir}/Uninstall-aliyun-service
+cd -
+rm -rf Uninstall-aliyun-service
 
 clear
 
