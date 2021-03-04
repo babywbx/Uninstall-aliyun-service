@@ -1,6 +1,6 @@
 #!/bin/bash
-# Author: wbx123
-# Blog: https://wbx123.com
+# Author: Babywbx
+# Blog: https://wbx1.com
 
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
@@ -18,8 +18,8 @@ stty $SAVEDSTTY
 clear
 printf "
 #######################################################################
-#                    Uninstall-aliyun-service    V1.0.5               #
-#       For more information please visit https://wbx123.com          #
+#                       Uninstall-aliyun-service                      #
+#          For more information please visit https://wbx1.com         #
 #######################################################################
 "
 
@@ -74,7 +74,7 @@ clear
 
 printf "
 #######################################################################
-#                    Uninstall-aliyun-service    V1.0.5               #
+#                       Uninstall-aliyun-service                      #
 #                                 Done!                               #
 #######################################################################
 "
