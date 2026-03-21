@@ -99,8 +99,8 @@ sudo bash UAS.sh [options]
 
 ## 参考资料
 
-- [阿里云：卸载客户端](https://www.alibabacloud.com/help/en/security-center/user-guide/uninstall-the-security-center-agent)
-- [阿里云：安装客户端](https://www.alibabacloud.com/help/en/security-center/user-guide/install-the-security-center-agent)
+- [阿里云：卸载客户端](https://help.aliyun.com/zh/security-center/user-guide/uninstall-the-security-center-agent)
+- [阿里云：安装客户端](https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent)
 
 ## 许可证
 
