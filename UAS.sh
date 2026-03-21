@@ -9,6 +9,7 @@ readonly DEFAULT_TIMEOUT=15
 
 AUTO_YES=0
 SKIP_QUARTZ=0
+INCLUDE_ASSIST=0
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -21,10 +22,10 @@ usage() {
 Usage: ./UAS.sh [options]
 
 Options:
-  -y, --yes        Run without interactive confirmation
-      --skip-quartz
-                   Skip legacy quartz cleanup
-  -h, --help       Show this help message
+  -y, --yes            Run without interactive confirmation
+      --include-assist Also uninstall Cloud Assistant (assist_daemon)
+      --skip-quartz    Skip legacy quartz cleanup
+  -h, --help           Show this help message
 EOF
 }
 
@@ -57,6 +58,9 @@ parse_args() {
       -y|--yes)
         AUTO_YES=1
         ;;
+      --include-assist)
+        INCLUDE_ASSIST=1
+        ;;
       --skip-quartz)
         SKIP_QUARTZ=1
         ;;
@@ -81,6 +85,9 @@ confirm() {
   printf '%s\n' " ${SCRIPT_NAME}"
   printf '%s\n' "======================================================================="
   printf '%s\n' "This script will uninstall the Alibaba Cloud Security Center agent."
+  if [[ "${INCLUDE_ASSIST}" -eq 1 ]]; then
+    printf '%s\n' "Cloud Assistant (assist_daemon) will also be removed."
+  fi
   printf '%s\n' "Before continuing, disable Agent Protection and"
   printf '%s\n' "Malicious Host Behavior Prevention in the Security Center console."
   printf '\n'
@@ -339,12 +346,91 @@ cleanup_aegis_directory() {
   fi
 }
 
+# Uninstall Cloud Assistant (assist_daemon + aliyun_assist)
+# Official order: stop daemon first (watchdog), then service, package, files.
+uninstall_cloud_assist() {
+  if [[ "${INCLUDE_ASSIST}" -eq 0 ]]; then
+    return 0
+  fi
+
+  log "Uninstalling Cloud Assistant."
+
+  # Step 1: Stop and delete the watchdog daemon
+  local daemon_bin="/usr/local/share/assist-daemon/assist_daemon"
+  if [[ -x "${daemon_bin}" ]]; then
+    log "Stopping assist_daemon watchdog."
+    "${daemon_bin}" --stop >/dev/null 2>&1 || true
+    "${daemon_bin}" --delete >/dev/null 2>&1 || true
+  fi
+
+  # Kill assist_daemon in case --stop/--delete didn't work
+  if command_exists pkill; then
+    pkill -x "assist_daemon" 2>/dev/null || pkill -f "/assist_daemon" 2>/dev/null || true
+  elif command_exists killall; then
+    killall "assist_daemon" >/dev/null 2>&1 || true
+  fi
+
+  # Step 2: Stop the Cloud Assistant service
+  if command_exists systemctl; then
+    systemctl stop aliyun.service >/dev/null 2>&1 || true
+    systemctl disable aliyun.service >/dev/null 2>&1 || true
+    systemctl stop AssistDaemon.service >/dev/null 2>&1 || true
+    systemctl disable AssistDaemon.service >/dev/null 2>&1 || true
+  fi
+
+  # Upstart (Ubuntu 14.04, CentOS 6)
+  if command_exists initctl; then
+    initctl stop aliyun-service >/dev/null 2>&1 || true
+  fi
+
+  # SysVinit
+  if [[ -x /etc/init.d/aliyun-service ]]; then
+    /etc/init.d/aliyun-service stop >/dev/null 2>&1 || true
+  fi
+
+  # Step 3: Uninstall the package
+  if command_exists rpm; then
+    local rpm_pkg=""
+    rpm_pkg="$(rpm -qa 2>/dev/null | grep aliyun_assist || true)"
+    if [[ -n "${rpm_pkg}" ]]; then
+      log "Removing RPM package: ${rpm_pkg}"
+      rpm -e "${rpm_pkg}" >/dev/null 2>&1 || true
+    fi
+  fi
+  if command_exists dpkg; then
+    if dpkg -l aliyun-assist >/dev/null 2>&1; then
+      log "Removing DEB package: aliyun-assist"
+      dpkg --purge aliyun-assist >/dev/null 2>&1 || true
+    fi
+  fi
+
+  # Step 4: Remove leftover directories and files
+  rm -rf /usr/local/share/aliyun-assist
+  rm -rf /usr/local/share/assist-daemon
+  rm -f /etc/init.d/aliyun-service
+  rm -f \
+    /etc/systemd/system/AssistDaemon.service \
+    /etc/systemd/system/multi-user.target.wants/AssistDaemon.service \
+    /lib/systemd/system/AssistDaemon.service \
+    /usr/lib/systemd/system/AssistDaemon.service
+
+  if command_exists systemctl; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl reset-failed AssistDaemon.service >/dev/null 2>&1 || true
+  fi
+
+  log "Cloud Assistant uninstall completed."
+}
+
 verify_uninstall() {
   local -a targets=(
     AliYunDun AliYunDunMonitor AliYunDunUpdate
     AliHips AliSecGuard AliSecCheck AliSecureCheck
     AliNet AliWebGuard aliyun-service
   )
+  if [[ "${INCLUDE_ASSIST}" -eq 1 ]]; then
+    targets+=(assist_daemon)
+  fi
   local found=0
   local name=""
 
@@ -397,6 +483,8 @@ main() {
   else
     warn "Aegis directory cleanup failed; you may need to manually remove /usr/local/aegis."
   fi
+
+  uninstall_cloud_assist
 
   if verify_uninstall; then
     :

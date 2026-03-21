@@ -4,16 +4,17 @@
 
 [简体中文](./README.md)
 
-A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux and clean up legacy component leftovers.
+A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux and clean up legacy component leftovers, with optional Cloud Assistant removal.
 
 ## Overview
 
-This project targets Linux hosts that may still contain historical YunDun / Aegis components. The script prefers the official Alibaba Cloud uninstall flow and adds cleanup for common legacy remnants such as `quartz`, `aliyun-service`, and `agentwatch`.
+This project targets Linux hosts that may still contain historical YunDun / Aegis components. The script prefers the official Alibaba Cloud uninstall flow and adds cleanup for common legacy remnants such as `quartz`, `aliyun-service`, and `agentwatch`. With `--include-assist`, it also removes Cloud Assistant (`assist_daemon`).
 
 Typical use cases:
 
 - Remove the Security Center agent (formerly Aegis / AnQiShi)
 - Clean up older YunDun components that may still be installed on the host
+- Remove Cloud Assistant (`assist_daemon`)
 - Run one script for both official uninstall and leftover cleanup instead of doing it manually
 - Strip related components from non-ECS or decommissioned servers
 
@@ -43,6 +44,12 @@ Non-interactive mode (skip confirmation):
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- -y
 ```
 
+Also remove Cloud Assistant:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- --include-assist
+```
+
 ## Usage
 
 ```bash
@@ -54,6 +61,7 @@ sudo bash UAS.sh [options]
 | Flag | Description |
 | --- | --- |
 | `-y`, `--yes` | Run without confirmation |
+| `--include-assist` | Also uninstall Cloud Assistant (`assist_daemon`) |
 | `--skip-quartz` | Skip legacy quartz cleanup |
 | `-h`, `--help` | Show help |
 
@@ -67,7 +75,8 @@ By default, the script performs the following steps:
 4. Downloads and runs the official Alibaba Cloud `uninstall.sh`
 5. Downloads and runs legacy `quartz_uninstall.sh` for compatibility cleanup (skippable with `--skip-quartz`)
 6. Kills agent processes, disables services, and removes leftover files and directories
-7. Verifies whether common agent processes are still running
+7. If `--include-assist` is specified, uninstalls Cloud Assistant (stops `assist_daemon` → stops service → removes package → cleans up directories)
+8. Verifies whether common agent processes are still running
 
 The current version does not modify firewall rules, overwrite `/etc/motd`, or create overly permissive directories.
 
@@ -102,6 +111,7 @@ Alibaba Cloud documentation notes that reinstalling shortly after uninstall may 
 
 - [Alibaba Cloud: Uninstall the Security Center agent](https://www.alibabacloud.com/help/en/security-center/user-guide/uninstall-the-security-center-agent)
 - [Alibaba Cloud: Install the Security Center agent](https://www.alibabacloud.com/help/en/security-center/user-guide/install-the-security-center-agent)
+- [Alibaba Cloud: Stop and uninstall Cloud Assistant agent](https://www.alibabacloud.com/help/en/ecs/user-guide/stop-and-uninstall-the-cloud-assistant-agent)
 
 ## License
 

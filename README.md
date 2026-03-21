@@ -4,16 +4,17 @@
 
 [English](./README.en.md)
 
-一键卸载阿里云云安全中心（云盾）Agent 并清理历史残留组件的 Bash 脚本。
+一键卸载阿里云云安全中心（云盾）Agent 并清理历史残留组件的 Bash 脚本，可选同时卸载云助手（Cloud Assistant）。
 
 ## 概述
 
-这个项目面向仍然存在历史遗留组件的 Linux 服务器环境。脚本会优先调用阿里云官方卸载脚本，并补充处理旧版 `quartz`、`aliyun-service`、`agentwatch` 等常见残留。
+这个项目面向仍然存在历史遗留组件的 Linux 服务器环境。脚本会优先调用阿里云官方卸载脚本，并补充处理旧版 `quartz`、`aliyun-service`、`agentwatch` 等常见残留。通过 `--include-assist` 参数还可以一并卸载云助手（`assist_daemon`）。
 
 适用场景：
 
 - 需要卸载云安全中心 Agent（原 Aegis / 安骑士）
 - 服务器上可能安装过旧版云盾组件，需要一并清理
+- 需要卸载云助手（Cloud Assistant / `assist_daemon`）
 - 希望用一个脚本完成官方卸载和残留清理，而不是手动逐项操作
 - 在非阿里云 ECS 或已退役的服务器上移除相关组件
 
@@ -43,6 +44,12 @@ curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/ma
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- -y
 ```
 
+连同云助手一起卸载：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- --include-assist
+```
+
 ## 用法
 
 ```bash
@@ -54,6 +61,7 @@ sudo bash UAS.sh [options]
 | 选项 | 说明 |
 | --- | --- |
 | `-y`, `--yes` | 跳过确认提示，直接执行 |
+| `--include-assist` | 同时卸载云助手（Cloud Assistant / `assist_daemon`） |
 | `--skip-quartz` | 跳过旧版 quartz 清理 |
 | `-h`, `--help` | 显示帮助信息 |
 
@@ -67,7 +75,8 @@ sudo bash UAS.sh [options]
 4. 下载并执行阿里云官方 `uninstall.sh`
 5. 下载并执行旧版 `quartz_uninstall.sh`，用于兼容清理（可通过 `--skip-quartz` 跳过）
 6. 终止 Agent 相关进程、停用服务、删除残留文件和目录
-7. 验证常见 Agent 进程是否仍在运行
+7. 若指定 `--include-assist`，卸载云助手（停止 `assist_daemon` → 停止服务 → 卸载软件包 → 清理目录）
+8. 验证常见 Agent 进程是否仍在运行
 
 当前版本不会主动修改防火墙规则、覆盖 `/etc/motd`，也不会创建宽权限目录。
 
@@ -100,8 +109,9 @@ sudo bash UAS.sh [options]
 
 ## 参考资料
 
-- [阿里云：卸载客户端](https://help.aliyun.com/zh/security-center/user-guide/uninstall-the-security-center-agent)
-- [阿里云：安装客户端](https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent)
+- [阿里云：卸载云安全中心客户端](https://help.aliyun.com/zh/security-center/user-guide/uninstall-the-security-center-agent)
+- [阿里云：安装云安全中心客户端](https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent)
+- [阿里云：启动、停止或卸载云助手客户端](https://help.aliyun.com/zh/ecs/user-guide/start-stop-or-uninstall-the-cloud-assistant-agent)
 
 ## 许可证
 
