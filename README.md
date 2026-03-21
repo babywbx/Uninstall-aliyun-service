@@ -1,7 +1,8 @@
 # Uninstall Aliyun Service
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-&ensp;[English](./README.en.md)
+
+[English](./README.en.md)
 
 一键卸载阿里云云安全中心（云盾）Agent 并清理历史残留组件的 Bash 脚本。
 

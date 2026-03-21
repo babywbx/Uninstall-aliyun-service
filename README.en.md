@@ -1,7 +1,8 @@
 # Uninstall Aliyun Service
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-&ensp;[简体中文](./README.md)
+
+[简体中文](./README.md)
 
 A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux and clean up legacy component leftovers.
 
