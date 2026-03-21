@@ -3,7 +3,8 @@
 set -Eeuo pipefail
 
 readonly SCRIPT_NAME="Uninstall-aliyun-service"
-readonly WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/uas.XXXXXX")"
+WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/uas.XXXXXX")"
+readonly WORKDIR
 readonly DEFAULT_TIMEOUT=15
 
 AUTO_YES=0
@@ -102,7 +103,7 @@ download_file() {
   fi
 
   if command_exists wget; then
-    wget -q -T "${DEFAULT_TIMEOUT}" -O "${output}" "${url}"
+    wget -q --connect-timeout=5 -T "${DEFAULT_TIMEOUT}" -O "${output}" "${url}"
     return $?
   fi
 
@@ -161,10 +162,9 @@ run_script() {
   chmod 700 "${script_path}"
   log "Running ${description}"
 
-  set +e
-  "${script_path}"
-  local rc=$?
-  set -e
+  # Run in subshell to avoid set +e leaking errexit on bash < 4.4
+  local rc=0
+  ("${script_path}") || rc=$?
 
   if [[ "${rc}" -ne 0 ]]; then
     if [[ "${rc}" -eq 6 ]]; then
@@ -229,35 +229,142 @@ run_legacy_quartz_cleanup() {
   fi
 }
 
+# Kill agent processes, with pkill fallback for minimal installations
+kill_agent_processes() {
+  local -a targets=(
+    aliyun-service
+    AliYunDun
+    AliYunDunMonitor
+    AliYunDunUpdate
+    AliHips
+    AliSecGuard
+    AliSecCheck
+    AliSecureCheck
+    AliNet
+    AliWebGuard
+  )
+
+  local name=""
+  for name in "${targets[@]}"; do
+    if command_exists pkill; then
+      # -x for exact match; fall back to -f for BusyBox pkill
+      pkill -x "${name}" 2>/dev/null || pkill -f "/${name}(\\s|$)" 2>/dev/null || true
+    elif command_exists killall; then
+      killall "${name}" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+# Stop and disable services across init systems (systemd / SysVinit / chkconfig)
+stop_services() {
+  local -a service_names=(aliyun aegis agentwatch)
+  local svc=""
+
+  for svc in "${service_names[@]}"; do
+    if command_exists systemctl; then
+      systemctl stop "${svc}.service" >/dev/null 2>&1 || true
+      systemctl disable "${svc}.service" >/dev/null 2>&1 || true
+    fi
+
+    # SysVinit (CentOS 6, Ubuntu 14.04, Debian 7)
+    if [[ -x "/etc/init.d/${svc}" ]]; then
+      /etc/init.d/"${svc}" stop >/dev/null 2>&1 || true
+    fi
+    if command_exists chkconfig; then
+      chkconfig --del "${svc}" >/dev/null 2>&1 || true
+    elif command_exists update-rc.d; then
+      update-rc.d -f "${svc}" remove >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 cleanup_legacy_leftovers() {
   log "Cleaning up legacy service leftovers."
 
-  pkill -x aliyun-service >/dev/null 2>&1 || true
+  kill_agent_processes
+  stop_services
 
-  if command_exists systemctl; then
-    systemctl stop aliyun.service >/dev/null 2>&1 || true
-    systemctl disable aliyun.service >/dev/null 2>&1 || true
-  fi
+  # Init scripts
+  rm -f /etc/init.d/aegis /etc/init.d/agentwatch
 
+  # Runlevel symlinks (SysVinit autostart on CentOS/Ubuntu/Debian)
+  local rc_dir=""
+  for rc_dir in /etc/rc{0,1,2,3,4,5,6}.d /etc/rc.d/rc{0,1,2,3,4,5,6}.d; do
+    rm -f "${rc_dir}/S80aegis" "${rc_dir}/K20aegis" \
+          "${rc_dir}/S80agentwatch" "${rc_dir}/K20agentwatch" \
+      >/dev/null 2>&1 || true
+  done
+
+  # OpenRC (Gentoo, Alpine)
+  rm -f /etc/runlevels/default/aegis >/dev/null 2>&1 || true
+
+  # Systemd unit files (Debian/Ubuntu: /lib, CentOS/RHEL: /usr/lib)
   rm -f \
-    /etc/init.d/agentwatch \
-    /usr/sbin/aliyun-service \
     /lib/systemd/system/aliyun.service \
-    /etc/systemd/system/aliyun.service
+    /lib/systemd/system/aegis.service \
+    /usr/lib/systemd/system/aliyun.service \
+    /usr/lib/systemd/system/aegis.service \
+    /etc/systemd/system/aliyun.service \
+    /etc/systemd/system/aegis.service \
+    /etc/systemd/system/multi-user.target.wants/aliyun.service \
+    /etc/systemd/system/multi-user.target.wants/aegis.service
+
+  # Legacy binaries
+  rm -f \
+    /usr/sbin/aliyun-service \
+    /usr/sbin/aliyun-service.backup \
+    /usr/sbin/aliyun_installer
 
   if command_exists systemctl; then
     systemctl daemon-reload >/dev/null 2>&1 || true
     systemctl reset-failed aliyun.service >/dev/null 2>&1 || true
+    systemctl reset-failed aegis.service >/dev/null 2>&1 || true
+  fi
+}
+
+# Remove /usr/local/aegis when official uninstall.sh was not available
+cleanup_aegis_directory() {
+  local aegis_dir="/usr/local/aegis"
+
+  if [[ ! -d "${aegis_dir}" ]]; then
+    return 0
+  fi
+
+  log "Removing leftover ${aegis_dir} directory."
+  if ! rm -rf "${aegis_dir}" 2>/dev/null; then
+    warn "Failed to fully remove ${aegis_dir}."
+    warn "Some files may be immutable or held by running processes."
+    warn "Try: chattr -R -i ${aegis_dir} && rm -rf ${aegis_dir}"
+    return 1
   fi
 }
 
 verify_uninstall() {
-  local process_output=""
+  local -a targets=(
+    AliYunDun AliYunDunMonitor AliYunDunUpdate
+    AliHips AliSecGuard AliSecCheck AliSecureCheck
+    AliNet AliWebGuard aliyun-service
+  )
+  local found=0
+  local name=""
 
-  process_output="$(ps -ef | grep -E 'AliYunDun|YunDunMonitor|YunDunUpdate|AliHips|aliyun-service' | grep -v grep || true)"
-  if [[ -n "${process_output}" ]]; then
-    warn "Some agent-related processes are still running:"
-    printf '%s\n' "${process_output}" >&2
+  for name in "${targets[@]}"; do
+    if command_exists pgrep; then
+      # -x matches exact process name; works on procps and BusyBox
+      if pgrep -x "${name}" >/dev/null 2>&1; then
+        warn "Process still running: ${name}"
+        found=1
+      fi
+    else
+      # shellcheck disable=SC2009
+      if ps -eo comm= 2>/dev/null | grep -qx "${name}"; then
+        warn "Process still running: ${name}"
+        found=1
+      fi
+    fi
+  done
+
+  if [[ "${found}" -ne 0 ]]; then
     warn "If these processes are protected, disable self-protection in the console and retry."
     return 1
   fi
@@ -284,6 +391,13 @@ main() {
 
   run_legacy_quartz_cleanup
   cleanup_legacy_leftovers
+
+  if cleanup_aegis_directory; then
+    :
+  else
+    warn "Aegis directory cleanup failed; you may need to manually remove /usr/local/aegis."
+  fi
+
   if verify_uninstall; then
     :
   else
