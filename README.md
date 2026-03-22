@@ -1,24 +1,58 @@
+<div align="center"><a name="readme-top"></a>
+
 # Uninstall Aliyun Service
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+一键卸载阿里云云安全中心（云盾）Agent 并清理历史残留组件的 Bash 脚本，<br/>
+可选同时卸载云助手（Cloud Assistant）。
 
-[English](./README.en.md)
+[English](./README.en.md) · [报告问题][github-issues-link] · [参考文档][doc-uninstall-link]
 
-一键卸载阿里云云安全中心（云盾）Agent 并清理历史残留组件的 Bash 脚本，可选同时卸载云助手（Cloud Assistant）。
+<!-- SHIELD GROUP -->
 
-## 概述
+[![][github-stars-shield]][github-stars-link]
+[![][github-forks-shield]][github-forks-link]
+[![][github-issues-shield]][github-issues-link]
+[![][github-license-shield]][github-license-link]<br/>
+[![][github-contributors-shield]][github-contributors-link]
+[![][github-lastcommit-shield]][github-lastcommit-link]
+
+</div>
+
+<details>
+<summary><kbd>目录</kbd></summary>
+
+#### TOC
+
+- [📋 概述](#-概述)
+- [⚠️ 前置条件](#️-前置条件)
+- [🚀 快速开始](#-快速开始)
+- [📖 用法](#-用法)
+- [🔩 执行流程](#-执行流程)
+- [🛠 故障排查](#-故障排查)
+- [📚 参考资料](#-参考资料)
+- [📝 许可证](#-许可证)
+
+</details>
+
+## 📋 概述
 
 这个项目面向仍然存在历史遗留组件的 Linux 服务器环境。脚本会优先调用阿里云官方卸载脚本，并补充处理旧版 `quartz`、`aliyun-service`、`agentwatch` 等常见残留。通过 `--include-assist` 参数还可以一并卸载云助手（`assist_daemon`）。
 
 适用场景：
 
-- 需要卸载云安全中心 Agent（原 Aegis / 安骑士）
-- 服务器上可能安装过旧版云盾组件，需要一并清理
-- 需要卸载云助手（Cloud Assistant / `assist_daemon`）
-- 希望用一个脚本完成官方卸载和残留清理，而不是手动逐项操作
-- 在非阿里云 ECS 或已退役的服务器上移除相关组件
+- 🛡️ 需要卸载云安全中心 Agent（原 Aegis / 安骑士）
+- 🧹 服务器上可能安装过旧版云盾组件，需要一并清理
+- 🤖 需要卸载云助手（Cloud Assistant / `assist_daemon`）
+- 📦 希望用一个脚本完成官方卸载和残留清理，而不是手动逐项操作
+- 🖥️ 在非阿里云 ECS 或已退役的服务器上移除相关组件
 
-## 前置条件
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## ⚠️ 前置条件
 
 在执行脚本前，请确认以下条件：
 
@@ -27,12 +61,20 @@
 3. 已安装 `curl` 或 `wget`（用于下载官方卸载脚本）
 4. 如果要走官方完整卸载流程，服务器需要能够访问阿里云卸载入口
 
-> **⚠️ 重要：** 必须先在 [云安全中心控制台](https://yundun.console.aliyun.com) 关闭以下保护项，否则自保护机制会阻止卸载：
+> \[!IMPORTANT]
+>
+> 必须先在 [云安全中心控制台](https://yundun.console.aliyun.com) 关闭以下保护项，否则自保护机制会阻止卸载：
 >
 > - **Agent Protection**（客户端自保护）
 > - **Malicious Host Behavior Prevention**（恶意主机行为防御）
 
-## 快速开始
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🚀 快速开始
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash
@@ -50,7 +92,13 @@ curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/ma
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- --include-assist
 ```
 
-## 用法
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 📖 用法
 
 ```bash
 sudo bash UAS.sh [options]
@@ -65,7 +113,13 @@ sudo bash UAS.sh [options]
 | `--skip-quartz` | 跳过旧版 quartz 清理 |
 | `-h`, `--help` | 显示帮助信息 |
 
-## 执行流程
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🔩 执行流程
 
 脚本默认执行以下流程：
 
@@ -80,7 +134,13 @@ sudo bash UAS.sh [options]
 
 当前版本不会主动修改防火墙规则、覆盖 `/etc/motd`，也不会创建宽权限目录。
 
-## 故障排查
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🛠 故障排查
 
 ### 官方卸载脚本执行失败
 
@@ -107,12 +167,45 @@ sudo bash UAS.sh [options]
 
 阿里云官方文档提到，卸载后短时间内重新安装可能存在限制，请以官方控制台和文档说明为准。
 
-## 参考资料
+<div align="right">
 
-- [阿里云：卸载云安全中心客户端](https://help.aliyun.com/zh/security-center/user-guide/uninstall-the-security-center-agent)
-- [阿里云：安装云安全中心客户端](https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent)
-- [阿里云：启动、停止或卸载云助手客户端](https://help.aliyun.com/zh/ecs/user-guide/start-stop-or-uninstall-the-cloud-assistant-agent)
+[![][back-to-top]](#readme-top)
 
-## 许可证
+</div>
 
-本项目基于 [MIT License](./LICENSE) 发布。
+## 📚 参考资料
+
+- [阿里云：卸载云安全中心客户端][doc-uninstall-link]
+- [阿里云：安装云安全中心客户端][doc-install-link]
+- [阿里云：启动、停止或卸载云助手客户端][doc-assist-link]
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 📝 许可证
+
+Copyright © 2018-present [Babywbx][profile-link].<br/>
+本项目基于 [MIT](./LICENSE) 许可证发布。
+
+<!-- LINK GROUP -->
+
+[back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
+[doc-assist-link]: https://help.aliyun.com/zh/ecs/user-guide/start-stop-or-uninstall-the-cloud-assistant-agent
+[doc-install-link]: https://help.aliyun.com/zh/security-center/user-guide/install-the-security-center-agent
+[doc-uninstall-link]: https://help.aliyun.com/zh/security-center/user-guide/uninstall-the-security-center-agent
+[github-contributors-link]: https://github.com/babywbx/Uninstall-aliyun-service/graphs/contributors
+[github-contributors-shield]: https://img.shields.io/github/contributors/babywbx/Uninstall-aliyun-service?color=c4f042&labelColor=black&style=flat-square
+[github-forks-link]: https://github.com/babywbx/Uninstall-aliyun-service/network/members
+[github-forks-shield]: https://img.shields.io/github/forks/babywbx/Uninstall-aliyun-service?color=8ae8ff&labelColor=black&style=flat-square
+[github-issues-link]: https://github.com/babywbx/Uninstall-aliyun-service/issues
+[github-issues-shield]: https://img.shields.io/github/issues/babywbx/Uninstall-aliyun-service?color=ff80eb&labelColor=black&style=flat-square
+[github-lastcommit-link]: https://github.com/babywbx/Uninstall-aliyun-service/commits/main
+[github-lastcommit-shield]: https://img.shields.io/github/last-commit/babywbx/Uninstall-aliyun-service?labelColor=black&style=flat-square
+[github-license-link]: https://github.com/babywbx/Uninstall-aliyun-service/blob/main/LICENSE
+[github-license-shield]: https://img.shields.io/github/license/babywbx/Uninstall-aliyun-service?color=white&labelColor=black&style=flat-square
+[github-stars-link]: https://github.com/babywbx/Uninstall-aliyun-service/stargazers
+[github-stars-shield]: https://img.shields.io/github/stars/babywbx/Uninstall-aliyun-service?color=ffcb47&labelColor=black&style=flat-square
+[profile-link]: https://github.com/babywbx

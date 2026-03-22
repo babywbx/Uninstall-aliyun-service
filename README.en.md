@@ -1,24 +1,58 @@
+<div align="center"><a name="readme-top"></a>
+
 # Uninstall Aliyun Service
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux<br/>
+and clean up legacy component leftovers, with optional Cloud Assistant removal.
 
-[简体中文](./README.md)
+[简体中文](./README.md) · [Report Issue][github-issues-link] · [Documentation][doc-uninstall-link]
 
-A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux and clean up legacy component leftovers, with optional Cloud Assistant removal.
+<!-- SHIELD GROUP -->
 
-## Overview
+[![][github-stars-shield]][github-stars-link]
+[![][github-forks-shield]][github-forks-link]
+[![][github-issues-shield]][github-issues-link]
+[![][github-license-shield]][github-license-link]<br/>
+[![][github-contributors-shield]][github-contributors-link]
+[![][github-lastcommit-shield]][github-lastcommit-link]
+
+</div>
+
+<details>
+<summary><kbd>Table of contents</kbd></summary>
+
+#### TOC
+
+- [📋 Overview](#-overview)
+- [⚠️ Prerequisites](#️-prerequisites)
+- [🚀 Quick Start](#-quick-start)
+- [📖 Usage](#-usage)
+- [🔩 What It Does](#-what-it-does)
+- [🛠 Troubleshooting](#-troubleshooting)
+- [📚 References](#-references)
+- [📝 License](#-license)
+
+</details>
+
+## 📋 Overview
 
 This project targets Linux hosts that may still contain historical YunDun / Aegis components. The script prefers the official Alibaba Cloud uninstall flow and adds cleanup for common legacy remnants such as `quartz`, `aliyun-service`, and `agentwatch`. With `--include-assist`, it also removes Cloud Assistant (`assist_daemon`).
 
 Typical use cases:
 
-- Remove the Security Center agent (formerly Aegis / AnQiShi)
-- Clean up older YunDun components that may still be installed on the host
-- Remove Cloud Assistant (`assist_daemon`)
-- Run one script for both official uninstall and leftover cleanup instead of doing it manually
-- Strip related components from non-ECS or decommissioned servers
+- 🛡️ Remove the Security Center agent (formerly Aegis / AnQiShi)
+- 🧹 Clean up older YunDun components that may still be installed on the host
+- 🤖 Remove Cloud Assistant (`assist_daemon`)
+- 📦 Run one script for both official uninstall and leftover cleanup instead of doing it manually
+- 🖥️ Strip related components from non-ECS or decommissioned servers
 
-## Prerequisites
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## ⚠️ Prerequisites
 
 Before running the script, make sure that:
 
@@ -27,12 +61,20 @@ Before running the script, make sure that:
 3. `curl` or `wget` is installed (used to download the official uninstall scripts)
 4. The host can reach Alibaba Cloud uninstall endpoints if you want the full official uninstall flow
 
-> **⚠️ Important:** Disable the following protections in the [Security Center console](https://yundun.console.aliyun.com) first — otherwise self-protection will block the uninstall:
+> \[!IMPORTANT]
+>
+> Disable the following protections in the [Security Center console](https://yundun.console.aliyun.com) first — otherwise self-protection will block the uninstall:
 >
 > - **Agent Protection**
 > - **Malicious Host Behavior Prevention**
 
-## Quick Start
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🚀 Quick Start
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash
@@ -50,7 +92,13 @@ Also remove Cloud Assistant:
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- --include-assist
 ```
 
-## Usage
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 📖 Usage
 
 ```bash
 sudo bash UAS.sh [options]
@@ -65,7 +113,13 @@ sudo bash UAS.sh [options]
 | `--skip-quartz` | Skip legacy quartz cleanup |
 | `-h`, `--help` | Show help |
 
-## What It Does
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🔩 What It Does
 
 By default, the script performs the following steps:
 
@@ -80,7 +134,13 @@ By default, the script performs the following steps:
 
 The current version does not modify firewall rules, overwrite `/etc/motd`, or create overly permissive directories.
 
-## Troubleshooting
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 🛠 Troubleshooting
 
 ### The official uninstall script fails
 
@@ -107,12 +167,45 @@ This usually means self-protection is still active, or the processes have not fu
 
 Alibaba Cloud documentation notes that reinstalling shortly after uninstall may be restricted. Follow the current console and official documentation guidance.
 
-## References
+<div align="right">
 
-- [Alibaba Cloud: Uninstall the Security Center agent](https://www.alibabacloud.com/help/en/security-center/user-guide/uninstall-the-security-center-agent)
-- [Alibaba Cloud: Install the Security Center agent](https://www.alibabacloud.com/help/en/security-center/user-guide/install-the-security-center-agent)
-- [Alibaba Cloud: Stop and uninstall Cloud Assistant agent](https://www.alibabacloud.com/help/en/ecs/user-guide/stop-and-uninstall-the-cloud-assistant-agent)
+[![][back-to-top]](#readme-top)
 
-## License
+</div>
 
-This project is released under the [MIT License](./LICENSE).
+## 📚 References
+
+- [Alibaba Cloud: Uninstall the Security Center agent][doc-uninstall-link]
+- [Alibaba Cloud: Install the Security Center agent][doc-install-link]
+- [Alibaba Cloud: Stop and uninstall Cloud Assistant agent][doc-assist-link]
+
+<div align="right">
+
+[![][back-to-top]](#readme-top)
+
+</div>
+
+## 📝 License
+
+Copyright © 2018-present [Babywbx][profile-link].<br/>
+This project is licensed under [MIT](./LICENSE).
+
+<!-- LINK GROUP -->
+
+[back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
+[doc-assist-link]: https://www.alibabacloud.com/help/en/ecs/user-guide/stop-and-uninstall-the-cloud-assistant-agent
+[doc-install-link]: https://www.alibabacloud.com/help/en/security-center/user-guide/install-the-security-center-agent
+[doc-uninstall-link]: https://www.alibabacloud.com/help/en/security-center/user-guide/uninstall-the-security-center-agent
+[github-contributors-link]: https://github.com/babywbx/Uninstall-aliyun-service/graphs/contributors
+[github-contributors-shield]: https://img.shields.io/github/contributors/babywbx/Uninstall-aliyun-service?color=c4f042&labelColor=black&style=flat-square
+[github-forks-link]: https://github.com/babywbx/Uninstall-aliyun-service/network/members
+[github-forks-shield]: https://img.shields.io/github/forks/babywbx/Uninstall-aliyun-service?color=8ae8ff&labelColor=black&style=flat-square
+[github-issues-link]: https://github.com/babywbx/Uninstall-aliyun-service/issues
+[github-issues-shield]: https://img.shields.io/github/issues/babywbx/Uninstall-aliyun-service?color=ff80eb&labelColor=black&style=flat-square
+[github-lastcommit-link]: https://github.com/babywbx/Uninstall-aliyun-service/commits/main
+[github-lastcommit-shield]: https://img.shields.io/github/last-commit/babywbx/Uninstall-aliyun-service?labelColor=black&style=flat-square
+[github-license-link]: https://github.com/babywbx/Uninstall-aliyun-service/blob/main/LICENSE
+[github-license-shield]: https://img.shields.io/github/license/babywbx/Uninstall-aliyun-service?color=white&labelColor=black&style=flat-square
+[github-stars-link]: https://github.com/babywbx/Uninstall-aliyun-service/stargazers
+[github-stars-shield]: https://img.shields.io/github/stars/babywbx/Uninstall-aliyun-service?color=ffcb47&labelColor=black&style=flat-square
+[profile-link]: https://github.com/babywbx
