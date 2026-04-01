@@ -99,6 +99,14 @@ Also remove CloudMonitor:
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash -s -- --include-cloudmonitor
 ```
 
+> \[!TIP]
+>
+> If `raw.githubusercontent.com` is unreachable, use the jsDelivr CDN mirror instead:
+>
+> ```bash
+> curl -fsSL https://cdn.jsdelivr.net/gh/babywbx/Uninstall-Aliyun-Service@main/UAS.sh | sudo bash -s -- -y
+> ```
+
 <div align="right">
 
 [![][back-to-top]](#readme-top)

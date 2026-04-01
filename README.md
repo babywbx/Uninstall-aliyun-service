@@ -99,6 +99,14 @@ curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/ma
 curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash -s -- --include-cloudmonitor
 ```
 
+> \[!TIP]
+>
+> 如果 `raw.githubusercontent.com` 无法访问，可以使用 jsDelivr CDN 替代：
+>
+> ```bash
+> curl -fsSL https://cdn.jsdelivr.net/gh/babywbx/Uninstall-Aliyun-Service@main/UAS.sh | sudo bash -s -- -y
+> ```
+
 <div align="right">
 
 [![][back-to-top]](#readme-top)
