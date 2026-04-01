@@ -446,13 +446,15 @@ uninstall_cloudmonitor() {
     return 0
   fi
 
-  local arch="386"
-  if [[ "$(uname -m)" == "x86_64" ]]; then
-    arch="amd64"
-  fi
+  local arch=""
+  case "$(uname -m)" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+    *)       arch="386" ;;
+  esac
 
   # Standard path is /usr/local/cloudmonitor; CoreOS/Flatcar uses /opt
-  local cms_home="" found_any=0
+  local cms_home="" go_agent="" found_any=0
   for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
     if [[ ! -d "${cms_home}" ]]; then
       continue
@@ -467,8 +469,8 @@ uninstall_cloudmonitor() {
       "${cms_home}/cloudmonitorCtl.sh" uninstall >/dev/null 2>&1 || true
     fi
 
-    # Go version (2.x): CmsGoAgent.linux-{amd64,386}
-    local go_agent="${cms_home}/CmsGoAgent.linux-${arch}"
+    # Go version (2.x): CmsGoAgent.linux-{amd64,arm64,386}
+    go_agent="${cms_home}/CmsGoAgent.linux-${arch}"
     if [[ -x "${go_agent}" ]]; then
       log "Stopping Go version (CmsGoAgent)."
       "${go_agent}" stop >/dev/null 2>&1 || true
@@ -480,8 +482,6 @@ uninstall_cloudmonitor() {
       log "Removing Java version (wrapper)."
       "${cms_home}/wrapper/bin/cloudmonitor.sh" remove >/dev/null 2>&1 || true
     fi
-
-    rm -rf "${cms_home}"
   done
 
   if [[ "${found_any}" -eq 0 ]]; then
@@ -489,7 +489,7 @@ uninstall_cloudmonitor() {
     return 0
   fi
 
-  # Kill lingering processes
+  # Kill lingering processes before removing directories
   if command_exists pkill; then
     pkill -x "argusagent" 2>/dev/null || true
     pkill -f "CmsGoAgent" 2>/dev/null || true
@@ -497,6 +497,10 @@ uninstall_cloudmonitor() {
     killall "argusagent" >/dev/null 2>&1 || true
     killall "CmsGoAgent.linux-${arch}" >/dev/null 2>&1 || true
   fi
+
+  for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
+    rm -rf "${cms_home}"
+  done
 
   log "CloudMonitor uninstall completed."
 }
@@ -534,10 +538,18 @@ verify_uninstall() {
 
   # CmsGoAgent binary includes arch suffix (e.g. CmsGoAgent.linux-amd64),
   # so pgrep -x cannot match; use -f for command-line pattern match instead.
-  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]] && command_exists pgrep; then
-    if pgrep -f "CmsGoAgent" >/dev/null 2>&1; then
-      warn "Process still running: CmsGoAgent"
-      found=1
+  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]]; then
+    if command_exists pgrep; then
+      if pgrep -f "CmsGoAgent" >/dev/null 2>&1; then
+        warn "Process still running: CmsGoAgent"
+        found=1
+      fi
+    else
+      # shellcheck disable=SC2009
+      if ps -eo args= 2>/dev/null | grep -q "CmsGoAgent"; then
+        warn "Process still running: CmsGoAgent"
+        found=1
+      fi
     fi
   fi
 
