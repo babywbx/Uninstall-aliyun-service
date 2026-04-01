@@ -86,6 +86,10 @@ confirm() {
     return
   fi
 
+  if [[ ! -t 0 ]]; then
+    die "Non-interactive stdin detected. Use -y to skip confirmation when piping."
+  fi
+
   printf '%s\n' "======================================================================="
   printf '%s\n' " ${SCRIPT_NAME}"
   printf '%s\n' "======================================================================="
@@ -197,6 +201,8 @@ run_official_uninstall() {
   local -a urls=()
 
   if detect_ecs; then
+    # On ECS, HTTP via internal network is faster and avoids TLS overhead;
+    # HTTPS fallback is provided in case internal endpoint is unreachable.
     log "Detected Alibaba Cloud ECS, preferring the official ECS endpoint."
     urls=(
       "http://update2.aegis.aliyun.com/download/uninstall.sh"
@@ -492,7 +498,7 @@ uninstall_cloudmonitor() {
   # Kill lingering processes before removing directories
   if command_exists pkill; then
     pkill -x "argusagent" 2>/dev/null || true
-    pkill -f "CmsGoAgent" 2>/dev/null || true
+    pkill -f "[C]msGoAgent" 2>/dev/null || true
   elif command_exists killall; then
     killall "argusagent" >/dev/null 2>&1 || true
     killall "CmsGoAgent.linux-${arch}" >/dev/null 2>&1 || true
@@ -540,13 +546,13 @@ verify_uninstall() {
   # so pgrep -x cannot match; use -f for command-line pattern match instead.
   if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]]; then
     if command_exists pgrep; then
-      if pgrep -f "CmsGoAgent" >/dev/null 2>&1; then
+      if pgrep -f "[C]msGoAgent" >/dev/null 2>&1; then
         warn "Process still running: CmsGoAgent"
         found=1
       fi
     else
       # shellcheck disable=SC2009
-      if ps -eo args= 2>/dev/null | grep -q "CmsGoAgent"; then
+      if ps -eo args= 2>/dev/null | grep -q "[C]msGoAgent"; then
         warn "Process still running: CmsGoAgent"
         found=1
       fi
@@ -571,30 +577,19 @@ main() {
   confirm
 
   log "Current Alibaba Cloud documentation requires disabling self-protection before command-line uninstall."
-  if run_official_uninstall; then
-    :
-  else
-    official_rc=$?
+  run_official_uninstall || official_rc=$?
+  if [[ "${official_rc}" -ne 0 ]]; then
     warn "Official uninstall.sh exited with status ${official_rc}."
   fi
 
   run_legacy_quartz_cleanup
   cleanup_legacy_leftovers
-
-  if cleanup_aegis_directory; then
-    :
-  else
-    warn "Aegis directory cleanup failed; you may need to manually remove /usr/local/aegis."
-  fi
+  cleanup_aegis_directory || warn "Aegis directory cleanup failed; you may need to manually remove /usr/local/aegis."
 
   uninstall_cloud_assist
   uninstall_cloudmonitor
 
-  if verify_uninstall; then
-    :
-  else
-    verify_rc=$?
-  fi
+  verify_uninstall || verify_rc=$?
 
   printf '\n'
   printf '%s\n' "======================================================================="
