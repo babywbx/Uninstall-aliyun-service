@@ -3,7 +3,7 @@
 # Uninstall Aliyun Service
 
 A Bash script to uninstall the Alibaba Cloud Security Center (YunDun) agent on Linux<br/>
-and clean up legacy component leftovers, with optional Cloud Assistant removal.
+and clean up legacy component leftovers, with optional Cloud Assistant and CloudMonitor removal.
 
 [简体中文](./README.md) · [Report Issue][github-issues-link] · [Documentation][doc-uninstall-link]
 
@@ -36,13 +36,14 @@ and clean up legacy component leftovers, with optional Cloud Assistant removal.
 
 ## 📋 Overview
 
-This project targets Linux hosts that may still contain historical YunDun / Aegis components. The script prefers the official Alibaba Cloud uninstall flow and adds cleanup for common legacy remnants such as `quartz`, `aliyun-service`, and `agentwatch`. With `--include-assist`, it also removes Cloud Assistant (`assist_daemon`).
+This project targets Linux hosts that may still contain historical YunDun / Aegis components. The script prefers the official Alibaba Cloud uninstall flow and adds cleanup for common legacy remnants such as `quartz`, `aliyun-service`, and `agentwatch`. Optional flags also remove Cloud Assistant (`assist_daemon`) and CloudMonitor (`argusagent` / `CmsGoAgent`).
 
 Typical use cases:
 
 - 🛡️ Remove the Security Center agent (formerly Aegis / AnQiShi)
 - 🧹 Clean up older YunDun components that may still be installed on the host
 - 🤖 Remove Cloud Assistant (`assist_daemon`)
+- 📊 Remove CloudMonitor (`argusagent` / `CmsGoAgent`)
 - 📦 Run one script for both official uninstall and leftover cleanup instead of doing it manually
 - 🖥️ Strip related components from non-ECS or decommissioned servers
 
@@ -77,19 +78,25 @@ Before running the script, make sure that:
 ## 🚀 Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash
 ```
 
 Non-interactive mode (skip confirmation):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- -y
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash -s -- -y
 ```
 
 Also remove Cloud Assistant:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-aliyun-service/main/UAS.sh | sudo bash -s -- --include-assist
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash -s -- --include-assist
+```
+
+Also remove CloudMonitor:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/babywbx/Uninstall-Aliyun-Service/main/UAS.sh | sudo bash -s -- --include-cloudmonitor
 ```
 
 <div align="right">
@@ -110,6 +117,7 @@ sudo bash UAS.sh [options]
 | --- | --- |
 | `-y`, `--yes` | Run without confirmation |
 | `--include-assist` | Also uninstall Cloud Assistant (`assist_daemon`) |
+| `--include-cloudmonitor` | Also uninstall CloudMonitor (`argusagent` / `CmsGoAgent`) |
 | `--skip-quartz` | Skip legacy quartz cleanup |
 | `-h`, `--help` | Show help |
 
@@ -130,7 +138,8 @@ By default, the script performs the following steps:
 5. Downloads and runs legacy `quartz_uninstall.sh` for compatibility cleanup (skippable with `--skip-quartz`)
 6. Kills agent processes, disables services, and removes leftover files and directories
 7. If `--include-assist` is specified, uninstalls Cloud Assistant (stops `assist_daemon` → stops service → removes package → cleans up directories)
-8. Verifies whether common agent processes are still running
+8. If `--include-cloudmonitor` is specified, uninstalls CloudMonitor (handles C++, Go, and Java agent versions)
+9. Verifies whether common agent processes are still running
 
 The current version does not modify firewall rules, overwrite `/etc/motd`, or create overly permissive directories.
 
@@ -178,6 +187,7 @@ Alibaba Cloud documentation notes that reinstalling shortly after uninstall may 
 - [Alibaba Cloud: Uninstall the Security Center agent][doc-uninstall-link]
 - [Alibaba Cloud: Install the Security Center agent][doc-install-link]
 - [Alibaba Cloud: Stop and uninstall Cloud Assistant agent][doc-assist-link]
+- [Alibaba Cloud: Install and uninstall CloudMonitor agent][doc-cloudmonitor-link]
 
 <div align="right">
 
@@ -194,18 +204,19 @@ This project is licensed under [MIT](./LICENSE).
 
 [back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
 [doc-assist-link]: https://www.alibabacloud.com/help/en/ecs/user-guide/stop-and-uninstall-the-cloud-assistant-agent
+[doc-cloudmonitor-link]: https://www.alibabacloud.com/help/en/cms/cloudmonitor-1-0/user-guide/install-and-uninstall-the-cloudmonitor-agent-for-cpp
 [doc-install-link]: https://www.alibabacloud.com/help/en/security-center/user-guide/install-the-security-center-agent
 [doc-uninstall-link]: https://www.alibabacloud.com/help/en/security-center/user-guide/uninstall-the-security-center-agent
-[github-contributors-link]: https://github.com/babywbx/Uninstall-aliyun-service/graphs/contributors
-[github-contributors-shield]: https://img.shields.io/github/contributors/babywbx/Uninstall-aliyun-service?color=c4f042&labelColor=black&style=flat-square
-[github-forks-link]: https://github.com/babywbx/Uninstall-aliyun-service/network/members
-[github-forks-shield]: https://img.shields.io/github/forks/babywbx/Uninstall-aliyun-service?color=8ae8ff&labelColor=black&style=flat-square
-[github-issues-link]: https://github.com/babywbx/Uninstall-aliyun-service/issues
-[github-issues-shield]: https://img.shields.io/github/issues/babywbx/Uninstall-aliyun-service?color=ff80eb&labelColor=black&style=flat-square
-[github-lastcommit-link]: https://github.com/babywbx/Uninstall-aliyun-service/commits/main
-[github-lastcommit-shield]: https://img.shields.io/github/last-commit/babywbx/Uninstall-aliyun-service?labelColor=black&style=flat-square
-[github-license-link]: https://github.com/babywbx/Uninstall-aliyun-service/blob/main/LICENSE
-[github-license-shield]: https://img.shields.io/github/license/babywbx/Uninstall-aliyun-service?color=white&labelColor=black&style=flat-square
-[github-stars-link]: https://github.com/babywbx/Uninstall-aliyun-service/stargazers
-[github-stars-shield]: https://img.shields.io/github/stars/babywbx/Uninstall-aliyun-service?color=ffcb47&labelColor=black&style=flat-square
+[github-contributors-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/graphs/contributors
+[github-contributors-shield]: https://img.shields.io/github/contributors/babywbx/Uninstall-Aliyun-Service?color=c4f042&labelColor=black&style=flat-square
+[github-forks-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/network/members
+[github-forks-shield]: https://img.shields.io/github/forks/babywbx/Uninstall-Aliyun-Service?color=8ae8ff&labelColor=black&style=flat-square
+[github-issues-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/issues
+[github-issues-shield]: https://img.shields.io/github/issues/babywbx/Uninstall-Aliyun-Service?color=ff80eb&labelColor=black&style=flat-square
+[github-lastcommit-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/commits/main
+[github-lastcommit-shield]: https://img.shields.io/github/last-commit/babywbx/Uninstall-Aliyun-Service?labelColor=black&style=flat-square
+[github-license-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/blob/main/LICENSE
+[github-license-shield]: https://img.shields.io/github/license/babywbx/Uninstall-Aliyun-Service?color=white&labelColor=black&style=flat-square
+[github-stars-link]: https://github.com/babywbx/Uninstall-Aliyun-Service/stargazers
+[github-stars-shield]: https://img.shields.io/github/stars/babywbx/Uninstall-Aliyun-Service?color=ffcb47&labelColor=black&style=flat-square
 [profile-link]: https://github.com/babywbx

@@ -10,6 +10,7 @@ readonly DEFAULT_TIMEOUT=15
 AUTO_YES=0
 SKIP_QUARTZ=0
 INCLUDE_ASSIST=0
+INCLUDE_CLOUDMONITOR=0
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -22,10 +23,11 @@ usage() {
 Usage: ./UAS.sh [options]
 
 Options:
-  -y, --yes            Run without interactive confirmation
-      --include-assist Also uninstall Cloud Assistant (assist_daemon)
-      --skip-quartz    Skip legacy quartz cleanup
-  -h, --help           Show this help message
+  -y, --yes                Run without interactive confirmation
+      --include-assist     Also uninstall Cloud Assistant (assist_daemon)
+      --include-cloudmonitor Also uninstall CloudMonitor (argusagent / CmsGoAgent)
+      --skip-quartz        Skip legacy quartz cleanup
+  -h, --help               Show this help message
 EOF
 }
 
@@ -61,6 +63,9 @@ parse_args() {
       --include-assist)
         INCLUDE_ASSIST=1
         ;;
+      --include-cloudmonitor)
+        INCLUDE_CLOUDMONITOR=1
+        ;;
       --skip-quartz)
         SKIP_QUARTZ=1
         ;;
@@ -87,6 +92,9 @@ confirm() {
   printf '%s\n' "This script will uninstall the Alibaba Cloud Security Center agent."
   if [[ "${INCLUDE_ASSIST}" -eq 1 ]]; then
     printf '%s\n' "Cloud Assistant (assist_daemon) will also be removed."
+  fi
+  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]]; then
+    printf '%s\n' "CloudMonitor (argusagent / CmsGoAgent) will also be removed."
   fi
   printf '%s\n' "Before continuing, disable Agent Protection and"
   printf '%s\n' "Malicious Host Behavior Prevention in the Security Center console."
@@ -422,6 +430,67 @@ uninstall_cloud_assist() {
   log "Cloud Assistant uninstall completed."
 }
 
+# Uninstall CloudMonitor agent (C++ argusagent, Go CmsGoAgent, Java wrapper)
+uninstall_cloudmonitor() {
+  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 0 ]]; then
+    return 0
+  fi
+
+  local arch="386"
+  if [[ "$(uname -m)" == "x86_64" ]]; then
+    arch="amd64"
+  fi
+
+  # Standard path is /usr/local/cloudmonitor; CoreOS/Flatcar uses /opt
+  local cms_home="" found_any=0
+  for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
+    if [[ ! -d "${cms_home}" ]]; then
+      continue
+    fi
+    found_any=1
+    log "Uninstalling CloudMonitor from ${cms_home}."
+
+    # C++ version (3.x): cloudmonitorCtl.sh
+    if [[ -x "${cms_home}/cloudmonitorCtl.sh" ]]; then
+      log "Stopping C++ version (argusagent)."
+      "${cms_home}/cloudmonitorCtl.sh" stop >/dev/null 2>&1 || true
+      "${cms_home}/cloudmonitorCtl.sh" uninstall >/dev/null 2>&1 || true
+    fi
+
+    # Go version (2.x): CmsGoAgent.linux-{amd64,386}
+    local go_agent="${cms_home}/CmsGoAgent.linux-${arch}"
+    if [[ -x "${go_agent}" ]]; then
+      log "Stopping Go version (CmsGoAgent)."
+      "${go_agent}" stop >/dev/null 2>&1 || true
+      "${go_agent}" uninstall >/dev/null 2>&1 || true
+    fi
+
+    # Java version (1.x): wrapper
+    if [[ -x "${cms_home}/wrapper/bin/cloudmonitor.sh" ]]; then
+      log "Removing Java version (wrapper)."
+      "${cms_home}/wrapper/bin/cloudmonitor.sh" remove >/dev/null 2>&1 || true
+    fi
+
+    rm -rf "${cms_home}"
+  done
+
+  if [[ "${found_any}" -eq 0 ]]; then
+    log "CloudMonitor directory not found, skipping."
+    return 0
+  fi
+
+  # Kill lingering processes
+  if command_exists pkill; then
+    pkill -x "argusagent" 2>/dev/null || true
+    pkill -f "CmsGoAgent" 2>/dev/null || true
+  elif command_exists killall; then
+    killall "argusagent" >/dev/null 2>&1 || true
+    killall "CmsGoAgent.linux-${arch}" >/dev/null 2>&1 || true
+  fi
+
+  log "CloudMonitor uninstall completed."
+}
+
 verify_uninstall() {
   local -a targets=(
     AliYunDun AliYunDunMonitor AliYunDunUpdate
@@ -430,6 +499,9 @@ verify_uninstall() {
   )
   if [[ "${INCLUDE_ASSIST}" -eq 1 ]]; then
     targets+=(assist_daemon)
+  fi
+  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]]; then
+    targets+=(argusagent)
   fi
   local found=0
   local name=""
@@ -449,6 +521,15 @@ verify_uninstall() {
       fi
     fi
   done
+
+  # CmsGoAgent binary includes arch suffix (e.g. CmsGoAgent.linux-amd64),
+  # so pgrep -x cannot match; use -f for command-line pattern match instead.
+  if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]] && command_exists pgrep; then
+    if pgrep -f "CmsGoAgent" >/dev/null 2>&1; then
+      warn "Process still running: CmsGoAgent"
+      found=1
+    fi
+  fi
 
   if [[ "${found}" -ne 0 ]]; then
     warn "If these processes are protected, disable self-protection in the console and retry."
@@ -485,6 +566,7 @@ main() {
   fi
 
   uninstall_cloud_assist
+  uninstall_cloudmonitor
 
   if verify_uninstall; then
     :
