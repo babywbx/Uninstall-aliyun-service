@@ -363,19 +363,27 @@ uninstall_cloud_assist() {
 
   log "Uninstalling Cloud Assistant."
 
-  # Step 1: Stop and delete the watchdog daemon
-  local daemon_bin="/usr/local/share/assist-daemon/assist_daemon"
-  if [[ -x "${daemon_bin}" ]]; then
-    log "Stopping assist_daemon watchdog."
-    "${daemon_bin}" --stop >/dev/null 2>&1 || true
-    "${daemon_bin}" --delete >/dev/null 2>&1 || true
-  fi
+  # Step 1: Stop and delete the watchdog daemon (check both standard and CoreOS paths)
+  local daemon_bin=""
+  for daemon_bin in \
+    /usr/local/share/assist-daemon/assist_daemon \
+    /opt/local/share/assist-daemon/assist_daemon; do
+    if [[ -x "${daemon_bin}" ]]; then
+      log "Stopping assist_daemon watchdog via ${daemon_bin}."
+      "${daemon_bin}" --stop >/dev/null 2>&1 || true
+      "${daemon_bin}" --delete >/dev/null 2>&1 || true
+    fi
+  done
 
-  # Kill assist_daemon in case --stop/--delete didn't work
+  # Kill assist_daemon and the auto-updater in case --stop/--delete didn't work
   if command_exists pkill; then
     pkill -x "assist_daemon" 2>/dev/null || pkill -f "/assist_daemon" 2>/dev/null || true
+    pkill -f "aliyun_assist_update" 2>/dev/null || true
+    pkill -f "aliyun-service" 2>/dev/null || true
+    pkill -f "aliyun_assist_service" 2>/dev/null || true
   elif command_exists killall; then
     killall "assist_daemon" >/dev/null 2>&1 || true
+    killall "aliyun-service" >/dev/null 2>&1 || true
   fi
 
   # Step 2: Stop the Cloud Assistant service
@@ -412,9 +420,11 @@ uninstall_cloud_assist() {
     fi
   fi
 
-  # Step 4: Remove leftover directories and files
+  # Step 4: Remove leftover directories and files (standard + CoreOS paths)
   rm -rf /usr/local/share/aliyun-assist
   rm -rf /usr/local/share/assist-daemon
+  rm -rf /opt/local/share/aliyun-assist
+  rm -rf /opt/local/share/assist-daemon
   rm -f /etc/init.d/aliyun-service
   rm -f \
     /etc/systemd/system/AssistDaemon.service \
