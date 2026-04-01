@@ -119,6 +119,7 @@ sudo bash UAS.sh [options]
 | `--include-assist` | 同时卸载云助手（Cloud Assistant / `assist_daemon`） |
 | `--include-cloudmonitor` | 同时卸载云监控（CloudMonitor / `argusagent` / `CmsGoAgent`） |
 | `--skip-quartz` | 跳过旧版 quartz 清理 |
+| `--allow-insecure-download` | 当 HTTPS 下载失败时，允许回退到 HTTP 下载官方脚本 |
 | `-h`, `--help` | 显示帮助信息 |
 
 <div align="right">
@@ -141,7 +142,7 @@ sudo bash UAS.sh [options]
 8. 若指定 `--include-cloudmonitor`，卸载云监控（兼容 C++、Go、Java 三个历史版本）
 9. 验证常见 Agent 进程是否仍在运行
 
-当前版本不会主动修改防火墙规则、覆盖 `/etc/motd`，也不会创建宽权限目录。
+当前版本默认仅通过 HTTPS 下载官方脚本；只有显式传入 `--allow-insecure-download` 时才会回退到 HTTP。它不会主动修改防火墙规则、覆盖 `/etc/motd`，也不会创建宽权限目录。
 
 <div align="right">
 
@@ -165,8 +166,19 @@ sudo bash UAS.sh [options]
 - 服务器网络出站受限
 - DNS 解析异常
 - 当前环境无法访问阿里云卸载入口
+- 系统缺少 CA 证书，导致 HTTPS 校验失败
 
-脚本会尝试回退到其他入口，并继续执行本地残留清理，但这不能完全替代官方卸载流程。
+建议先安装系统 CA 证书后重试，例如：
+
+```bash
+# Debian / Ubuntu
+apt-get update && apt-get install -y ca-certificates
+
+# CentOS / RHEL
+yum install -y ca-certificates
+```
+
+如确实处于受限的历史环境，且你明确接受风险，也可以显式添加 `--allow-insecure-download` 允许回退到 HTTP。但这不能完全替代官方 HTTPS 卸载流程。
 
 ### 卸载后仍有相关进程
 

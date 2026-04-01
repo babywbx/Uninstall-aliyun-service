@@ -11,6 +11,7 @@ AUTO_YES=0
 SKIP_QUARTZ=0
 INCLUDE_ASSIST=0
 INCLUDE_CLOUDMONITOR=0
+ALLOW_INSECURE_DOWNLOAD=0
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -27,6 +28,7 @@ Options:
       --include-assist     Also uninstall Cloud Assistant (assist_daemon)
       --include-cloudmonitor Also uninstall CloudMonitor (argusagent / CmsGoAgent)
       --skip-quartz        Skip legacy quartz cleanup
+      --allow-insecure-download Allow fallback to HTTP when HTTPS download fails
   -h, --help               Show this help message
 EOF
 }
@@ -102,6 +104,9 @@ parse_args() {
       --skip-quartz)
         SKIP_QUARTZ=1
         ;;
+      --allow-insecure-download)
+        ALLOW_INSECURE_DOWNLOAD=1
+        ;;
       -h|--help)
         usage
         exit 0
@@ -132,6 +137,9 @@ confirm() {
   fi
   if [[ "${INCLUDE_CLOUDMONITOR}" -eq 1 ]]; then
     printf '%s\n' "CloudMonitor (argusagent / CmsGoAgent) will also be removed."
+  fi
+  if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 1 ]]; then
+    printf '%s\n' "Insecure HTTP download fallback is enabled."
   fi
   printf '%s\n' "Before continuing, disable Agent Protection and"
   printf '%s\n' "Malicious Host Behavior Prevention in the Security Center console."
@@ -234,27 +242,40 @@ run_official_uninstall() {
   local -a urls=()
 
   if detect_ecs; then
-    # On ECS, HTTP via internal network is faster and avoids TLS overhead;
-    # HTTPS fallback is provided in case internal endpoint is unreachable.
     log "Detected Alibaba Cloud ECS, preferring the official ECS endpoint."
     urls=(
-      "http://update2.aegis.aliyun.com/download/uninstall.sh"
       "https://update2.aegis.aliyun.com/download/uninstall.sh"
       "https://update.aegis.aliyun.com/download/uninstall.sh"
-      "http://update.aegis.aliyun.com/download/uninstall.sh"
     )
+    if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 1 ]]; then
+      warn "Allowing insecure HTTP fallback for official uninstall download."
+      urls+=(
+        "http://update2.aegis.aliyun.com/download/uninstall.sh"
+        "http://update.aegis.aliyun.com/download/uninstall.sh"
+      )
+    fi
   else
     log "Using the public uninstall endpoint for a non-ECS server."
     urls=(
       "https://update.aegis.aliyun.com/download/uninstall.sh"
-      "http://update.aegis.aliyun.com/download/uninstall.sh"
-      "http://update2.aegis.aliyun.com/download/uninstall.sh"
       "https://update2.aegis.aliyun.com/download/uninstall.sh"
     )
+    if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 1 ]]; then
+      warn "Allowing insecure HTTP fallback for official uninstall download."
+      urls+=(
+      "http://update.aegis.aliyun.com/download/uninstall.sh"
+      "http://update2.aegis.aliyun.com/download/uninstall.sh"
+      )
+    fi
   fi
 
   if ! download_first_available "${script_path}" "${urls[@]}"; then
     warn "Unable to download the official uninstall.sh script."
+    if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 0 ]]; then
+      warn "HTTPS download failed. Ensure CA certificates are installed, then retry."
+      warn "Examples: apt-get install ca-certificates / yum install ca-certificates"
+      warn "If you must use HTTP fallback, rerun with --allow-insecure-download."
+    fi
     return 1
   fi
 
@@ -265,7 +286,6 @@ run_legacy_quartz_cleanup() {
   local script_path="${WORKDIR}/quartz_uninstall.sh"
   local -a urls=(
     "https://update.aegis.aliyun.com/download/quartz_uninstall.sh"
-    "http://update.aegis.aliyun.com/download/quartz_uninstall.sh"
   )
 
   if [[ "${SKIP_QUARTZ}" -eq 1 ]]; then
@@ -273,8 +293,17 @@ run_legacy_quartz_cleanup() {
     return 0
   fi
 
+  if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 1 ]]; then
+    warn "Allowing insecure HTTP fallback for legacy quartz cleanup download."
+    urls+=("http://update.aegis.aliyun.com/download/quartz_uninstall.sh")
+  fi
+
   if ! download_first_available "${script_path}" "${urls[@]}"; then
     warn "Legacy quartz_uninstall.sh is unavailable, skipping."
+    if [[ "${ALLOW_INSECURE_DOWNLOAD}" -eq 0 ]]; then
+      warn "If HTTPS is failing because CA certificates are missing, install them and retry."
+      warn "If you must use HTTP fallback, rerun with --allow-insecure-download."
+    fi
     return 0
   fi
 

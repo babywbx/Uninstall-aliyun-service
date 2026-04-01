@@ -119,6 +119,7 @@ sudo bash UAS.sh [options]
 | `--include-assist` | Also uninstall Cloud Assistant (`assist_daemon`) |
 | `--include-cloudmonitor` | Also uninstall CloudMonitor (`argusagent` / `CmsGoAgent`) |
 | `--skip-quartz` | Skip legacy quartz cleanup |
+| `--allow-insecure-download` | Allow HTTP fallback when HTTPS download of official scripts fails |
 | `-h`, `--help` | Show help |
 
 <div align="right">
@@ -141,7 +142,7 @@ By default, the script performs the following steps:
 8. If `--include-cloudmonitor` is specified, uninstalls CloudMonitor (handles C++, Go, and Java agent versions)
 9. Verifies whether common agent processes are still running
 
-The current version does not modify firewall rules, overwrite `/etc/motd`, or create overly permissive directories.
+The current version downloads official scripts over HTTPS by default and only falls back to HTTP if `--allow-insecure-download` is explicitly provided. It does not modify firewall rules, overwrite `/etc/motd`, or create overly permissive directories.
 
 <div align="right">
 
@@ -165,8 +166,19 @@ Common causes include:
 - Outbound network restrictions on the server
 - DNS resolution issues
 - The host cannot reach Alibaba Cloud uninstall endpoints
+- Missing CA certificates on the system, causing HTTPS validation to fail
 
-The script will try fallback endpoints and continue with local leftover cleanup, but that does not fully replace the official uninstall flow.
+Install CA certificates first, then retry. For example:
+
+```bash
+# Debian / Ubuntu
+apt-get update && apt-get install -y ca-certificates
+
+# CentOS / RHEL
+yum install -y ca-certificates
+```
+
+If you are in a constrained legacy environment and explicitly accept the risk, you can rerun with `--allow-insecure-download` to permit HTTP fallback. That still does not fully replace the preferred HTTPS uninstall flow.
 
 ### Related processes are still running after uninstall
 
