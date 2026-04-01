@@ -48,6 +48,39 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+process_args_contain() {
+  local needle="$1"
+
+  if command_exists pgrep; then
+    pgrep -f "${needle}" >/dev/null 2>&1
+    return $?
+  fi
+
+  ps -eo args= 2>/dev/null | awk -v needle="${needle}" '
+    index($0, needle) > 0 { found=1; exit }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+kill_matching_args() {
+  local needle="$1"
+
+  if command_exists pkill; then
+    pkill -f "${needle}" >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  local pid=""
+  while IFS= read -r pid; do
+    [[ -n "${pid}" ]] || continue
+    kill "${pid}" >/dev/null 2>&1 || true
+  done < <(
+    ps -eo pid=,args= 2>/dev/null | awk -v needle="${needle}" '
+      index($0, needle) > 0 { print $1 }
+    '
+  )
+}
+
 require_root() {
   if [[ "${EUID}" -ne 0 ]]; then
     die "Please run this script as root."
@@ -412,12 +445,17 @@ uninstall_cloud_assist() {
 
   # Step 3: Uninstall the package
   if command_exists rpm; then
+    local -a rpm_pkgs=()
     local rpm_pkg=""
-    rpm_pkg="$(rpm -qa 2>/dev/null | grep aliyun_assist || true)"
-    if [[ -n "${rpm_pkg}" ]]; then
+    while IFS= read -r rpm_pkg; do
+      [[ -n "${rpm_pkg}" ]] || continue
+      rpm_pkgs+=("${rpm_pkg}")
+    done < <(rpm -qa 'aliyun_assist*' 2>/dev/null || true)
+
+    for rpm_pkg in "${rpm_pkgs[@]}"; do
       log "Removing RPM package: ${rpm_pkg}"
       rpm -e "${rpm_pkg}" >/dev/null 2>&1 || true
-    fi
+    done
   fi
   if command_exists dpkg; then
     if dpkg -l aliyun-assist >/dev/null 2>&1; then
@@ -452,6 +490,10 @@ uninstall_cloudmonitor() {
     return 0
   fi
 
+  local -a cloudmonitor_paths=(
+    /usr/local/cloudmonitor
+    /opt/cloudmonitor
+  )
   local arch=""
   case "$(uname -m)" in
     x86_64)  arch="amd64" ;;
@@ -461,7 +503,7 @@ uninstall_cloudmonitor() {
 
   # Standard path is /usr/local/cloudmonitor; CoreOS/Flatcar uses /opt
   local cms_home="" go_agent="" found_any=0
-  for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
+  for cms_home in "${cloudmonitor_paths[@]}"; do
     if [[ ! -d "${cms_home}" ]]; then
       continue
     fi
@@ -503,8 +545,11 @@ uninstall_cloudmonitor() {
     killall "argusagent" >/dev/null 2>&1 || true
     killall "CmsGoAgent.linux-${arch}" >/dev/null 2>&1 || true
   fi
+  for cms_home in "${cloudmonitor_paths[@]}"; do
+    kill_matching_args "${cms_home}/"
+  done
 
-  for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
+  for cms_home in "${cloudmonitor_paths[@]}"; do
     rm -rf "${cms_home}"
   done
 
@@ -557,6 +602,14 @@ verify_uninstall() {
         found=1
       fi
     fi
+
+    local cms_home=""
+    for cms_home in /usr/local/cloudmonitor /opt/cloudmonitor; do
+      if process_args_contain "${cms_home}/"; then
+        warn "Process still running from CloudMonitor path: ${cms_home}"
+        found=1
+      fi
+    done
   fi
 
   if [[ "${found}" -ne 0 ]]; then
